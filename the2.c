@@ -35,6 +35,21 @@ void init_tmr1() {
     // read value of TIMER1 from TMR1H:TMR1L registers
 }
 
+uint8_t generate_random() {
+    uint8_t random_note = (TMR1L & 0x07);
+    random_note %= 5;
+    switch(game_level) {
+        case 1:
+            random_note = ((TMR1L >> 1) & 0x07);
+        case 2:
+            random_note = ((TMR1L >> 3) & 0x07);
+        case 3:
+            random_note = ((TMR1L >> 5) & 0x07);
+    }
+    random_note %= 5;
+    return random_note;
+}
+
 typedef enum {TMR_IDLE, TMR_RUN, TMR_DONE} tmr_state_t;
 tmr_state_t tmr0_state = TMR_IDLE, tmr1_state = TMR_IDLE;
 uint8_t tmr0_startreq = 0, tmr1_startreq = 0;
