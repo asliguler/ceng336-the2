@@ -3,11 +3,12 @@
 
 void tmr0_isr();
 void tmr1_isr();
-void __interrupt(high_priority) highPriorityISR(void) {
+void __interrupt() highPriorityISR(void) {
     if (INTCONbits.TMR0IF) tmr0_isr();
-    else if (PIR1bits.TMR1IF) tmr1_isr(); // TODO: can be also low priorty TBD
+    else if (PIR1bits.TMR1IF) tmr1_isr();
+    return;// TODO: can be also low priorty TBD
 }
-void __interrupt(low_priority) lowPriorityISR(void) {}
+
 
 uint8_t game_started = 0, game_level = 1;
 
@@ -43,6 +44,7 @@ void init_ports() {
 void init_irq() {
     // global & timer0 & timer1 interruptlarını enable et
     INTCONbits.TMR0IE = 1;
+    INTCONbits.PEIE = 1;
     PIE1bits.TMR1IE = 1;
     INTCONbits.GIE = 1;
 }
@@ -114,10 +116,15 @@ void tmr1_isr() {
     PIR1bits.TMR1IF = 0;
     // overflow oldugu icin timer tamamlandi
     tmr1_state = TMR_DONE;
+    TMR1L = 0x00;
+    TMR1H = 0x00;
 }
 
 void init_tmr1() {
     T1CON = 0x00;
+    PIR1bits.TMR1IF = 0;
+    TMR1L = 0x00;
+    TMR1H = 0x00;
     // INFO: read value of TIMER1 from TMR1H:TMR1L registers
 }
 
