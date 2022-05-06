@@ -137,7 +137,6 @@ uint16_t generate_random() {
 
 
 void seven_segment_display() {
-    
     if (game_started){
         if (tmr1_state == TMR_DONE) { 
             display_side != display_side
@@ -196,7 +195,6 @@ void seven_segment_display() {
             }
         }
     }
-
 }
 
 void timer_task() {
@@ -226,12 +224,13 @@ void timer_task() {
 }
 
 void input_task() {
-    if (PORTCbits.RC0) rc0_state = 1;
-    else if (rc0_state == 1){
+    if (PORTCbits.RC0) rc0_state = 1; // RC0'ye basildi
+    else if (rc0_state == 1){ // RC0 release edildi
         rc0_state = 0;
-        game_started = 1;
-        TRISC = 0x00;
+        game_started = 1; 
+        TRISC = 0x00; // RC0'yu bundan sonra notlari gostermek icin output olarak kullanacagiz
         game_level = 1;
+        health = 9;
     }
 }
 
