@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 void tmr0_isr();
+void tmr1_isr();
 void __interrupt(high_priority) highPriorityISR(void) {
     if (INTCONbits.TMR0IF) tmr0_isr();
     else if (PIR1bits.TMR1IF) tmr1_isr(); // TODO: can be also low priorty TBD
@@ -12,7 +13,7 @@ uint8_t game_started = 0, game_level = 1;
 
 uint8_t health = 9;
 
-bool display_side = 0; 
+uint8_t display_side = 0; 
 
 uint8_t rc0_state = 0;
 
@@ -42,7 +43,7 @@ void init_ports() {
 void init_irq() {
     // global & timer0 & timer1 interruptlarını enable et
     INTCONbits.TMR0IE = 1;
-    PIE1.TMR1IE = 1;
+    PIE1bits.TMR1IE = 1;
     INTCONbits.GIE = 1;
 }
 
@@ -50,7 +51,7 @@ void config_tmr0() {
     T0CONbits.T08BIT = 1; // 8-bit mode
     T0CONbits.T0PS0 = 1; // 1:256 pre-scaler
     T0CONbits.T0PS1 = 1; // 1:256 pre-scaler
-    T0CONbits.T0PS2 = 1; // 1:256 pre-scaler 
+    T0CONbits.T0PS2 = 1; // 1:256 pre-scaler
     // INFO: Timer0'nun degerlerini TMR0L registerindan oku
 }
 
@@ -73,7 +74,7 @@ void tmr0_isr(){
     switch (game_level) {
         case 1:
             // 500 msec tamamlamak icin 76 kere overflow olmali
-            if tmr0_count < 76 {
+            if (tmr0_count < 76) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -84,7 +85,7 @@ void tmr0_isr(){
             }
         case 2:
             // 400 msec tamamlamak icin 61 kere overflow olmali
-            if tmr0_count < 61 {
+            if (tmr0_count < 61) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -95,7 +96,7 @@ void tmr0_isr(){
             }
         case 3:
             // 300 msec tamamlamak icin 45 kere overflow olmali
-            if tmr0_count < 45 {
+            if (tmr0_count < 45) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -139,7 +140,8 @@ uint16_t generate_random() {
 void seven_segment_display() {
     if (game_started){
         if (tmr1_state == TMR_DONE) { 
-            display_side != display_side
+            if(display_side == 1) display_side = 0;
+            else display_side = 1;
             tmr1_state = TMR_IDLE;
             tmr1_startreq = 1;
         }
@@ -208,6 +210,7 @@ void timer_task() {
                 T0CONbits.TMR0ON = 1;
                 tmr0_state = TMR_RUN;
             }
+            break;
         case TMR_RUN:
             break;
         case TMR_DONE:
@@ -220,6 +223,11 @@ void timer_task() {
                 T1CONbits.TMR1ON = 1;
                 tmr1_state = TMR_RUN;
             }
+            break;
+        case TMR_RUN:
+            break;
+        case TMR_DONE:
+            break;
     }
 }
 
@@ -231,6 +239,7 @@ void input_task() {
         TRISC = 0x00; // RC0'yu bundan sonra notlari gostermek icin output olarak kullanacagiz
         game_level = 1;
         health = 9;
+        tmr1_startreq = 1;
     }
 }
 
@@ -253,7 +262,7 @@ void main(void) {
     while(1) {
         seven_segment_display();
         input_task();
-        timer0_task();
+        timer_task();
         game_task();
     }
 }
