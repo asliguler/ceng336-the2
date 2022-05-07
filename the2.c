@@ -24,6 +24,18 @@ uint8_t tmr0_startreq = 0, tmr1_startreq = 0;
 uint8_t tmr0_ticks_left, tmr1_ticks_left; 
 uint8_t tmr0_count = 0;
 
+uint16_t random_n_value;
+
+
+typedef enum { LVL_BEG, LVL_CONT, LVL_BLANK, LVL_END} level_state_t;
+level_state_t level_state = LVL_BEG; 
+
+
+uint8_t level_max_note = 5; 
+uint8_t note_count = 0; 
+uint8_t blank_note_count = 0; // Will be used for counting 5 times when we are forwarding after note_count reached its max
+
+
 #define TIMER0_PRELOAD_LEVEL1 74
 #define TIMER0_PRELOAD_LEVEL2 4
 #define TIMER0_PRELOAD_LEVEL3 190
@@ -221,6 +233,7 @@ void timer_task() {
         case TMR_RUN:
             break;
         case TMR_DONE:
+            tmr0_state = TMR_IDLE; 
             break;
     }
     switch (tmr1_state) {
@@ -250,8 +263,110 @@ void input_task() {
     }
 }
 
-void game_task() {
+void forward_task_blank(){
 
+}
+
+void forward_task(){
+
+}
+
+void check_press_task(){
+
+}
+
+void note_task(){
+    tmr0_startreq = 1;
+    uint16_t random_note =  create_note_task();
+
+    switch(random_note){
+        case 0 :
+        case 1 :
+        case 2 :
+        case 3 :
+        case 4 :
+    }
+}
+
+
+
+void game_task() {
+    if(game_started){
+        switch(level_state){
+            case LVL_BEG :
+                if(tmr0_state == TMR_IDLE){
+                    tmr0_startreq = 1;
+                    note_task();
+                    note_count++;
+                    level_state = LVL_CONT;
+                }
+                break;
+
+            case LVL_CONT:
+                switch (tmr0_state){
+                    case TMR_IDLE:
+                        
+                        if(note_count != level_max_note){
+                            tmr0_startreq = 1;
+                            note_count++;
+                            note_task();
+                            forward_task();
+                        }
+                        else{
+                            level_state = LVL_BLANK;
+                        }
+
+                        break;
+
+                    case TMR_RUN:
+                        if(note_count>5){
+                            check_press_task();
+                        }
+                        break;
+
+                    case TMR_DONE:
+                        break;
+
+                }
+            break;
+
+            case LVL_BLANK:
+                switch (tmr0_state){
+                    case TMR_IDLE:
+                        if(blank_note_count<5){
+                            tmr0_startreq = 1; 
+                            blank_note_count++;
+                            forward_task_blank();
+                        }
+                        else{
+                            level_state = LVL_END;
+                        }
+                        break;
+
+                    case TMR_RUN:
+                        check_press_task();
+                        break;
+
+                    case TMR_DONE:
+                        break;
+                }
+                break;
+
+            case LVL_END:
+                blank_note_count = 0 ;
+                note_count = 0; 
+                
+                level_max_note += 5;
+                
+                if(++game_level > 3){
+                    level_max_note = 5;
+                    game_over(); // END_GAME(), WE ARE IN THE END GAME NOW. 
+                }
+                
+                level_state = LVL_BEG;
+                break;
+        }
+    }
 }
 
 void game_over() {
