@@ -34,6 +34,12 @@ uint8_t note_count = 0;
 uint8_t blank_note_count = 0; // Will be used for counting 5 times when we are forwarding after note_count reached its max
 
 
+typedef enum {NOT_PRSS, PRSS } press_state_t; 
+press_state_t press_state0=NOT_PRSS, press_state1=NOT_PRSS, press_state2=NOT_PRSS , press_state3=NOT_PRSS , press_state4=NOT_PRSS , press_state5=NOT_PRSS;
+
+uint8_t miss_penalty = 1;
+uint8_t correct_note;
+
 
 #define TIMER0_PRELOAD_LEVEL1 74
 #define TIMER0_PRELOAD_LEVEL2 4
@@ -281,37 +287,99 @@ void forward_task(){
     LATB = LATA;
 }
 
-// press_released   :   High bits ->  Press,    Low bits -> Release
-uint8_t press_released = 0x00;  
-uint8_t successfull_press = 0 ;
 
-typedef enum {NOT_PRSS, PRSSD, RLSD } press_state_t;
-press_state_t press_state = NOT_PRSS;
+// 
 
-void check_press_task(){ 
-    
-    switch (press_released){
-        case NOT_PRSS: //Not pressed
-        break;
 
-        case PRSSD: // Pressed but not released
-        break;
-
-        case RLSD: // Released 
-        break;
+void check_press_task(){
+    // LATG0
+    if(LATGbits.LATG0){
+        press_state0 = PRSS;
+    }
+    else if(press_state0 == PRSS){
+        press_state0 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
     }
 
-
-
-
-    if(press_released == ){ 
-
+    // LATG1
+    if(LATGbits.LATG1){
+        press_state1 = PRSS;
     }
-    else if(press_released == 0x10){ 
-
+    else if(press_state1 == PRSS){
+        press_state1 = NOT_PRSS;
+        if(correct_note == 1) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
     }
-    else if(press_released == 0x11){ 
 
+    // LATG2
+    if(LATGbits.LATG2){
+        press_state2 = PRSS;
+    }
+    else if(press_state2 == PRSS){
+        press_state2 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
+
+    // LATG3
+    if(LATGbits.LATG3){
+        press_state3 = PRSS;
+    }
+    else if(press_state3 == PRSS){
+        press_state3 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
+
+    // LATG4
+    if(LATGbits.LATG4){
+        press_state4 = PRSS;
+    }
+    else if(press_state4 == PRSS){
+        press_state4 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
     }
 }
 
@@ -319,21 +387,29 @@ void note_task(){
     tmr0_startreq = 1;
     uint16_t random_note =  create_note_task();
 
+    miss_penalty = 0;
+    correct_note = random_note;
+    
     switch(random_note){
         case 0 :
             LATA = 0x01;
+            
             break;
         case 1 :
             LATA = 0x02;
+            
             break;
         case 2 :
             LATA = 0x04;
+             
             break;
         case 3 :
             LATA = 0x08;
+             
             break;
         case 4 :
-            LATA = 0x0F;
+            LATA = 0x10;
+             
             break;
     }
 }
@@ -345,10 +421,7 @@ void game_task() {
         switch(level_state){
             case LVL_BEG :
                 if(tmr0_state == TMR_IDLE){
-                    tmr0_startreq = 1;
-                    note_task();
-                    note_count++;
-                    level_state = LVL_CONT;
+                    tmr0_startreq = 1;rc0_state
                 }
                 break;
 
