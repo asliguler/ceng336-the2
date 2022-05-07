@@ -1,5 +1,6 @@
 #include <xc.h>
 #include <stdint.h>
+#pragma config OSC = HSPLL
 
 void tmr0_isr();
 void tmr1_isr();
@@ -14,9 +15,7 @@ uint8_t game_started = 0, game_level = 1;
 
 uint8_t health = 9;
 
-uint8_t display_side = 0; 
-
-uint8_t rc0_state = 0;
+uint8_t display_side = 0;
 
 typedef enum {TMR_IDLE, TMR_RUN, TMR_DONE} tmr_state_t;
 tmr_state_t tmr0_state = TMR_IDLE, tmr1_state = TMR_IDLE;
@@ -24,7 +23,7 @@ uint8_t tmr0_startreq = 0, tmr1_startreq = 0;
 uint8_t tmr0_ticks_left, tmr1_ticks_left; 
 uint8_t tmr0_count = 0;
 
-uint16_t random_n_value;
+uint16_t random_n_value = 0;
 
 
 typedef enum { LVL_BEG, LVL_CONT, LVL_BLANK, LVL_END} level_state_t;
@@ -32,6 +31,13 @@ level_state_t level_state = LVL_BEG;
 
 typedef enum {GAME_OVER_END, GAME_OVER_LOSE, GAME_OVER_DEFAULT} game_over_state_t;
 game_over_state_t game_over_state = GAME_OVER_DEFAULT; 
+
+// press_released   :   High bits ->  Press,    Low bits -> Release
+uint8_t press_released = 0x00;  
+uint8_t successfull_press = 0 ;
+
+typedef enum {NOT_PRSS, PRSSD} press_state_t;
+press_state_t press_state = NOT_PRSS;
 
 
 uint8_t level_max_note = 5; 
@@ -54,10 +60,35 @@ void init_ports() {
     TRISG = 0x1f;
     TRISH = 0x00;
     TRISJ = 0x00;
+    
+    
+    LATA = 0x00;
+    LATB = 0x00;
+    LATC = 0x00;
+    PORTC = 0x00;
+    LATD = 0x00;
+    LATE = 0x00;
+    LATF = 0x00;
+    LATG = 0x00;
+    PORTG = 0x00;
+    LATH = 0x00;
+    LATJ = 0x00;
+}
+
+void init_variables(){
+    health = 9;
+    game_level = 1;
+    press_state = NOT_PRSS;
+    tmr0_count = 0;
+    tmr0_startreq = 0; 
+    tmr1_startreq = 0;
+    level_max_note = 5; 
+    note_count = 0; 
+    blank_note_count = 0;
 }
 
 void init_irq() {
-    // global & timer0 & timer1 interruptlarını enable et
+    // global & timer0 & timer1 interruptlarini enable et
     INTCONbits.TMR0IE = 1;
     INTCONbits.PEIE = 1;
     PIE1bits.TMR1IE = 1;
@@ -144,7 +175,7 @@ void init_tmr1() {
 }
 
 
-uint16_t generate_random() {
+uint16_t generate_random_note() {
     uint16_t random_note =  (TMR1H << 8) | TMR1L;
     switch(game_level) {
         case 1:
@@ -289,6 +320,8 @@ void timer_task() {
         case TMR_IDLE:
             if (tmr1_startreq) {
                 tmr1_startreq = 0;
+                TMR1L = 0x00;
+                TMR1H = 0x00;
                 T1CONbits.TMR1ON = 1;
                 tmr1_state = TMR_RUN;
             }
@@ -302,9 +335,9 @@ void timer_task() {
 
 void input_task() {
     if (game_started == 0){    
-        if (PORTCbits.RC0) rc0_state = 1; // RC0'ye basildi
-        else if (rc0_state == 1){ // RC0 release edildi
-            rc0_state = 0;
+        if (PORTCbits.RC0) press_state = PRSSD; // RC0'ye basildi
+        else if (press_state == PRSSD){ // RC0 release edildi
+            press_state = NOT_PRSS;
             game_started = 1; 
             TRISC = 0x00; // RC0'yu bundan sonra notlari gostermek icin output olarak kullanacagiz
             game_level = 1;
@@ -314,32 +347,42 @@ void input_task() {
     }
 }
 
-void forward_task_blank(){
-
+void blank_note_task(){
+    LATA = 0x00;
+    forward_task();
 }
 
 void forward_task(){
-
+    LATF = LATD;
+    LATD = LATC;
+    LATC = LATB;
+    LATB = LATA;
 }
 
 void check_press_task(){
-
 }
 
 void note_task(){
-    tmr0_startreq = 1;
-    uint16_t random_note =  create_note_task();
+    uint16_t random_note = generate_random_note();
 
     switch(random_note){
         case 0 :
+            LATA = 0x01;
+            break;
         case 1 :
+            LATA = 0x02;
+            break;
         case 2 :
+            LATA = 0x04;
+            break;
         case 3 :
+            LATA = 0x08;
+            break;
         case 4 :
+            LATA = 0x10;
+            break;
     }
 }
-
-
 
 void game_task() {
     if(game_started){
@@ -356,7 +399,6 @@ void game_task() {
             case LVL_CONT:
                 switch (tmr0_state){
                     case TMR_IDLE:
-                        
                         if(note_count != level_max_note){
                             tmr0_startreq = 1;
                             note_count++;
@@ -368,18 +410,15 @@ void game_task() {
                         }
 
                         break;
-
                     case TMR_RUN:
                         if(note_count>5){
                             check_press_task();
                         }
                         break;
-
                     case TMR_DONE:
                         break;
-
                 }
-            break;
+                break;
 
             case LVL_BLANK:
                 switch (tmr0_state){
@@ -387,7 +426,7 @@ void game_task() {
                         if(blank_note_count<5){
                             tmr0_startreq = 1; 
                             blank_note_count++;
-                            forward_task_blank();
+                            blank_note_task();
                         }
                         else{
                             level_state = LVL_END;
@@ -421,14 +460,16 @@ void game_task() {
 }
 
 void game_over() {
-    //TODO: appropriate texts displayed on 7-segment display
-    TRISC = 0x01;
+    TRISC = 0x01; // oyunu tekrar baslatmak icin rc0'ya basilmasi gerektigi
+                  // icin rc0'yu tekrar input olarak ayarla
+    init_ports();
+    init_variables();
     game_started = 0;
-    health = 9;
 }
 
 void main(void) {
     init_ports();
+    init_variables();
     config_tmr0();
     init_tmr1();
     init_irq();
