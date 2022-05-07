@@ -30,6 +30,9 @@ uint16_t random_n_value;
 typedef enum { LVL_BEG, LVL_CONT, LVL_BLANK, LVL_END} level_state_t;
 level_state_t level_state = LVL_BEG; 
 
+typedef enum {GAME_OVER_END, GAME_OVER_LOSE, GAME_OVER_DEFAULT} game_over_state_t;
+game_over_state_t game_over_state = GAME_OVER_DEFAULT; 
+
 
 uint8_t level_max_note = 5; 
 uint8_t note_count = 0; 
@@ -157,7 +160,7 @@ uint16_t generate_random() {
 
 
 void seven_segment_display() {
-    if (game_started){
+    if (game_over_state == GAME_OVER_DEFAULT){
         if (tmr1_state == TMR_DONE) { 
             if(display_side == 1) display_side = 0;
             else display_side = 1;
@@ -215,6 +218,52 @@ void seven_segment_display() {
                     break;
             }
         }
+    } else if (game_over_state == GAME_OVER_END) {
+        if (tmr1_state == TMR_DONE) { 
+            if (display_side < 3) display_side++;
+            else display_side = 0;
+            tmr1_state = TMR_IDLE;
+            tmr1_startreq = 1;
+        }
+        switch (display_side) {
+            case 0:
+                PORTH = 0x01;
+                PORTJ = 0x79;
+                break;
+            case 1:
+                PORTH = 0x02;
+                PORTJ = 0x54;
+                break;
+            case 2:
+                PORTH = 0x04;
+                PORTJ = 0x5e;
+                break;
+        }
+    } else if (game_over_state == GAME_OVER_LOSE) {
+        if (tmr1_state == TMR_DONE) { 
+            if (display_side < 4) display_side++;
+            else display_side = 0;
+            tmr1_state = TMR_IDLE;
+            tmr1_startreq = 1;
+        }
+        switch (display_side) {
+            case 0:
+                PORTH = 0x01;
+                PORTJ = 0x38;
+                break;
+            case 1:
+                PORTH = 0x02;
+                PORTJ = 0x3f;
+                break;
+            case 2:
+                PORTH = 0x04;
+                PORTJ = 0x6d;
+                break;
+            case 3:
+                PORTH = 0x08;
+                PORTJ = 0x79;
+                break;
+        }
     }
 }
 
@@ -252,14 +301,16 @@ void timer_task() {
 }
 
 void input_task() {
-    if (PORTCbits.RC0) rc0_state = 1; // RC0'ye basildi
-    else if (rc0_state == 1){ // RC0 release edildi
-        rc0_state = 0;
-        game_started = 1; 
-        TRISC = 0x00; // RC0'yu bundan sonra notlari gostermek icin output olarak kullanacagiz
-        game_level = 1;
-        health = 9;
-        tmr1_startreq = 1;
+    if (game_started == 0){    
+        if (PORTCbits.RC0) rc0_state = 1; // RC0'ye basildi
+        else if (rc0_state == 1){ // RC0 release edildi
+            rc0_state = 0;
+            game_started = 1; 
+            TRISC = 0x00; // RC0'yu bundan sonra notlari gostermek icin output olarak kullanacagiz
+            game_level = 1;
+            health = 9;
+            game_over_state = GAME_OVER_DEFAULT;
+        }
     }
 }
 
@@ -381,6 +432,7 @@ void main(void) {
     config_tmr0();
     init_tmr1();
     init_irq();
+    tmr1_startreq = 1;
     while(1) {
         seven_segment_display();
         input_task();
