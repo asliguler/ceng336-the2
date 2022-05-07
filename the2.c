@@ -50,6 +50,17 @@ void init_ports() {
     TRISG = 0x1f;
     TRISH = 0x00;
     TRISJ = 0x00;
+
+    LATA = 0x00;
+    LATB = 0x00;
+    LATC = 0x00;
+    LATD = 0x00;
+    LATE = 0x00;
+    LATF = 0x00;
+    LATG = 0x00;
+    LATH = 0x00;
+    LATJ = 0x00;
+    
 }
 
 void init_irq() { //init IRAQ
@@ -259,16 +270,49 @@ void input_task() {
     }
 }
 
-void forward_task_blank(){
-
+void blank_note_task(){
+    LATA = 0x00;
 }
 
 void forward_task(){
-
+    LATF = LATD;
+    LATD = LATC;
+    LATC = LATB;
+    LATB = LATA;
 }
 
-void check_press_task(){
+// press_released   :   High bits ->  Press,    Low bits -> Release
+uint8_t press_released = 0x00;  
+uint8_t successfull_press = 0 ;
 
+typedef enum {NOT_PRSS, PRSSD, RLSD } press_state_t;
+press_state_t press_state = NOT_PRSS;
+
+void check_press_task(){ 
+    
+    switch (press_released){
+        case NOT_PRSS: //Not pressed
+        break;
+
+        case PRSSD: // Pressed but not released
+        break;
+
+        case RLSD: // Released 
+        break;
+    }
+
+
+
+
+    if(press_released == ){ 
+
+    }
+    else if(press_released == 0x10){ 
+
+    }
+    else if(press_released == 0x11){ 
+
+    }
 }
 
 void note_task(){
@@ -277,10 +321,20 @@ void note_task(){
 
     switch(random_note){
         case 0 :
+            LATA = 0x01;
+            break;
         case 1 :
+            LATA = 0x02;
+            break;
         case 2 :
+            LATA = 0x04;
+            break;
         case 3 :
+            LATA = 0x08;
+            break;
         case 4 :
+            LATA = 0x0F;
+            break;
     }
 }
 
@@ -305,8 +359,9 @@ void game_task() {
                         if(note_count != level_max_note){
                             tmr0_startreq = 1;
                             note_count++;
-                            note_task();
                             forward_task();
+                            note_task();
+                            
                         }
                         else{
                             level_state = LVL_BLANK;
@@ -332,7 +387,8 @@ void game_task() {
                         if(blank_note_count<5){
                             tmr0_startreq = 1; 
                             blank_note_count++;
-                            forward_task_blank();
+                            blank_note_task();
+                            forward_task();
                         }
                         else{
                             level_state = LVL_END;
@@ -384,3 +440,4 @@ void main(void) {
         game_task();
     }
 }
+
