@@ -36,14 +36,17 @@ game_over_state_t game_over_state = GAME_OVER_DEFAULT;
 uint8_t press_released = 0x00;  
 uint8_t successfull_press = 0 ;
 
-typedef enum {NOT_PRSS, PRSSD} press_state_t;
-press_state_t press_state = NOT_PRSS;
+typedef enum {NOT_PRSS, PRSS } press_state_t; 
+press_state_t press_state0=NOT_PRSS, press_state1=NOT_PRSS, press_state2=NOT_PRSS , press_state3=NOT_PRSS , press_state4=NOT_PRSS , press_state5=NOT_PRSS;
+press_state_t press_state_rc0 = NOT_PRSS;
 
 
 uint8_t level_max_note = 5; 
 uint8_t note_count = 0; 
 uint8_t blank_note_count = 0; // Will be used for counting 5 times when we are forwarding after note_count reached its max
 
+uint8_t miss_penalty = 1;
+uint8_t correct_note;
 
 #define TIMER0_PRELOAD_LEVEL1 74
 #define TIMER0_PRELOAD_LEVEL2 4
@@ -78,7 +81,13 @@ void init_ports() {
 void init_variables(){
     health = 9;
     game_level = 1;
-    press_state = NOT_PRSS;
+    press_state_rc0 = NOT_PRSS;
+    press_state0=NOT_PRSS; 
+    press_state1=NOT_PRSS; 
+    press_state2=NOT_PRSS; 
+    press_state3=NOT_PRSS;
+    press_state4=NOT_PRSS;
+    press_state5=NOT_PRSS;
     tmr0_count = 0;
     tmr0_startreq = 0; 
     tmr1_startreq = 0;
@@ -335,9 +344,9 @@ void timer_task() {
 
 void input_task() {
     if (game_started == 0){    
-        if (PORTCbits.RC0) press_state = PRSSD; // RC0'ye basildi
-        else if (press_state == PRSSD){ // RC0 release edildi
-            press_state = NOT_PRSS;
+        if (PORTCbits.RC0) press_state_rc0 = PRSS; // RC0'ye basildi
+        else if (press_state_rc0 == PRSS){ // RC0 release edildi
+            press_state_rc0 = NOT_PRSS;
             game_started = 1; 
             TRISC = 0x00; // RC0'yu bundan sonra notlari gostermek icin output olarak kullanacagiz
             game_level = 1;
@@ -349,7 +358,6 @@ void input_task() {
 
 void blank_note_task(){
     LATA = 0x00;
-    forward_task();
 }
 
 void forward_task(){
@@ -360,11 +368,101 @@ void forward_task(){
 }
 
 void check_press_task(){
+    // LATG0
+    if(LATGbits.LATG0){
+        press_state0 = PRSS;
+    }
+    else if(press_state0 == PRSS){
+        press_state0 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
+
+    // LATG1
+    if(LATGbits.LATG1){
+        press_state1 = PRSS;
+    }
+    else if(press_state1 == PRSS){
+        press_state1 = NOT_PRSS;
+        if(correct_note == 1) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
+
+    // LATG2
+    if(LATGbits.LATG2){
+        press_state2 = PRSS;
+    }
+    else if(press_state2 == PRSS){
+        press_state2 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
+
+    // LATG3
+    if(LATGbits.LATG3){
+        press_state3 = PRSS;
+    }
+    else if(press_state3 == PRSS){
+        press_state3 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
+
+    // LATG4
+    if(LATGbits.LATG4){
+        press_state4 = PRSS;
+    }
+    else if(press_state4 == PRSS){
+        press_state4 = NOT_PRSS;
+        if(correct_note == 0) {
+            miss_penalty = 0;
+        }
+        else {
+            
+            if(--health == 0) {
+                game_over_state = GAME_OVER_LOSE;
+                game_over();
+            }
+        }
+    }
 }
 
 void note_task(){
     uint16_t random_note = generate_random_note();
-
+    miss_penalty = 0;
+    correct_note = random_note;
     switch(random_note){
         case 0 :
             LATA = 0x01;
@@ -402,8 +500,8 @@ void game_task() {
                         if(note_count != level_max_note){
                             tmr0_startreq = 1;
                             note_count++;
-                            note_task();
                             forward_task();
+                            note_task();
                         }
                         else{
                             level_state = LVL_BLANK;
@@ -427,6 +525,7 @@ void game_task() {
                             tmr0_startreq = 1; 
                             blank_note_count++;
                             blank_note_task();
+                            forward_task();
                         }
                         else{
                             level_state = LVL_END;
