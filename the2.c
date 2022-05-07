@@ -450,6 +450,7 @@ void game_task() {
                 
                 if(++game_level > 3){
                     level_max_note = 5;
+                    game_over_state = GAME_OVER_END;
                     game_over(); // END_GAME(), WE ARE IN THE END GAME NOW. 
                 }
                 
@@ -460,11 +461,9 @@ void game_task() {
 }
 
 void game_over() {
-    TRISC = 0x01; // oyunu tekrar baslatmak icin rc0'ya basilmasi gerektigi
-                  // icin rc0'yu tekrar input olarak ayarla
+    game_started = 0;
     init_ports();
     init_variables();
-    game_started = 0;
 }
 
 void main(void) {
