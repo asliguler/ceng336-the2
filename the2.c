@@ -2,8 +2,10 @@
 #include <stdint.h>
 #pragma config OSC = HSPLL
 
+void game_over();
 void tmr0_isr();
 void tmr1_isr();
+
 void __interrupt() highPriorityISR(void) {
     if (INTCONbits.TMR0IF) tmr0_isr();
     else if (PIR1bits.TMR1IF) tmr1_isr();
@@ -115,10 +117,7 @@ void init_irq() {
 }
 
 void config_tmr0() {
-    T0CONbits.T08BIT = 1; // 8-bit mode
-    T0CONbits.T0PS0 = 1; // 1:256 pre-scaler
-    T0CONbits.T0PS1 = 1; // 1:256 pre-scaler
-    T0CONbits.T0PS2 = 1; // 1:256 pre-scaler
+    T0CON = 0x47;
     // INFO: Timer0'nun degerlerini TMR0L registerindan oku
 }
 
@@ -150,6 +149,7 @@ void tmr0_isr(){
                 tmr0_state = TMR_DONE;
                 tmr0_preload();
             }
+            break;
         case 2:
             // 400 msec tamamlamak icin 61 kere overflow olmali
             if (tmr0_count < 61) {
@@ -161,6 +161,7 @@ void tmr0_isr(){
                 tmr0_state = TMR_DONE;
                 tmr0_preload();
             }
+            break;
         case 3:
             // 300 msec tamamlamak icin 45 kere overflow olmali
             if (tmr0_count < 45) {
@@ -172,6 +173,7 @@ void tmr0_isr(){
                 tmr0_state = TMR_DONE;
                 tmr0_preload();
             }
+            break;
     }
 }
 
@@ -198,13 +200,13 @@ uint16_t generate_random() {
     uint16_t random_note ;
     switch(game_level) {
         case 1:
-            random_n_value = (random_n_value >> 1) 
+            random_n_value = (random_n_value >> 1); 
             random_note = (random_n_value & 0x0007);
         case 2:
-            random_n_value = (random_n_value >> 3) 
+            random_n_value = (random_n_value >> 3); 
             random_note = (random_n_value & 0x0007);
         case 3:
-            random_n_value = (random_n_value >> 7) 
+            random_n_value = (random_n_value >> 7); 
             random_note = (random_n_value & 0x0007);
     }
     random_note %= 5;
@@ -382,7 +384,7 @@ void forward_task(){
 //Check press task every LATG register with the information of correct note that we assigned in the note_Task(). Same logic for all 4.
 void check_press_task(){
     // LATG0
-    if(LATGbits.LATG0){ 
+    if(PORTGbits.RG0){ 
         press_state0 = PRSS;
         if(correct_note == 0) LATF = 0x00;
     }
@@ -402,7 +404,7 @@ void check_press_task(){
     }
 
     // LATG1
-    if(LATGbits.LATG1){
+    if(PORTGbits.RG1){
         press_state1 = PRSS;
         if(correct_note == 1) LATF = 0x00;
     }
@@ -421,7 +423,7 @@ void check_press_task(){
     }
 
     // LATG2
-    if(LATGbits.LATG2){
+    if(PORTGbits.RG2){
         press_state2 = PRSS;
         if(correct_note == 2) LATF = 0x00;
     }
@@ -440,7 +442,7 @@ void check_press_task(){
     }
 
     // LATG3
-    if(LATGbits.LATG3){
+    if(PORTGbits.RG3){
         press_state3 = PRSS;
         if(correct_note == 3) LATF = 0x00;
     }
@@ -459,7 +461,7 @@ void check_press_task(){
     }
 
     // LATG4
-    if(LATGbits.LATG4){
+    if(PORTGbits.RG4){
         press_state4 = PRSS;
         if(correct_note == 4) LATF = 0x00;
     }
@@ -518,7 +520,7 @@ void blank_note_task(){
 
 // Note task manages the lighting the correct note at the A output pins, assignment of correct_note and miss_penalty. 
 void note_task(){
-    uint16_t random_note = generate_random_note();
+    uint16_t random_note = generate_random();
     
     if(note_count<5){
         correct_note = -1; 
