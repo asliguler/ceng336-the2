@@ -357,6 +357,7 @@ void input_task() {
 }
 
 void blank_note_task(){
+    miss_penalty = 1;
     LATA = 0x00;
 }
 
@@ -461,8 +462,16 @@ void check_press_task(){
 
 void note_task(){
     uint16_t random_note = generate_random_note();
-    miss_penalty = 0;
-    correct_note = random_note;
+    
+    if(note_count<5){
+        correct_note = -1; 
+        miss_penalty = 0;
+    }
+    else{
+        correct_note = random_note;
+        miss_penalty = 1;
+    }
+    
     switch(random_note){
         case 0 :
             LATA = 0x01;
@@ -484,13 +493,20 @@ void note_task(){
 
 void game_task() {
     if(game_started){
+
         switch(level_state){
             case LVL_BEG :
-                if(tmr0_state == TMR_IDLE){
-                    tmr0_startreq = 1;
-                    note_task();
-                    note_count++;
-                    level_state = LVL_CONT;
+
+                switch (tmr0_state){
+                    case TMR_IDLE:
+                        tmr0_startreq = 1;
+                        note_task();
+                        note_count++;
+                        level_state = LVL_CONT;
+                        break;
+                    case TMR_RUN:
+                        check_press_task();
+                        break;
                 }
                 break;
 
@@ -509,9 +525,7 @@ void game_task() {
 
                         break;
                     case TMR_RUN:
-                        if(note_count>5){
-                            check_press_task();
-                        }
+                        check_press_task();
                         break;
                     case TMR_DONE:
                         break;
