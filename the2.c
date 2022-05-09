@@ -89,6 +89,8 @@ void init_ports() {
     PORTG = 0x00;
     LATH = 0x00;
     LATJ = 0x00;
+    
+    ADCON1 = 0x0F;
 }
 
 void init_variables(){
@@ -108,6 +110,7 @@ void init_variables(){
     note_count = 0; 
     blank_note_count = 0;
     miss_penalty = 0;
+    level_state = LVL_BEG; 
 }
 void reset_press_states(){
     press_state0=NOT_PRSS; 
@@ -150,7 +153,7 @@ void tmr0_isr(){
     switch (game_level) {
         case 1:
             // 500 msec tamamlamak icin 76 kere overflow olmali
-            if (tmr0_count < 76) {
+            if (tmr0_count <200) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -162,7 +165,7 @@ void tmr0_isr(){
             break;
         case 2:
             // 400 msec tamamlamak icin 61 kere overflow olmali
-            if (tmr0_count < 61) {
+            if (tmr0_count < 150) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -174,7 +177,7 @@ void tmr0_isr(){
             break;
         case 3:
             // 300 msec tamamlamak icin 45 kere overflow olmali
-            if (tmr0_count < 45) {
+            if (tmr0_count < 140) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -210,15 +213,15 @@ uint16_t generate_random() {
     uint16_t random_note ;
     switch(game_level) {
         case 1:
-            random_n_value = (random_n_value >> 1); 
+            random_n_value = (random_n_value >> 1) | (random_n_value >> 15);
             random_note = (random_n_value & 0x0007);
             break;
         case 2:
-            random_n_value = (random_n_value >> 3); 
+            random_n_value = (random_n_value >> 3) | (random_n_value >> 13); 
             random_note = (random_n_value & 0x0007);
             break;
         case 3:
-            random_n_value = (random_n_value >> 7); 
+            random_n_value = (random_n_value >> 5) | (random_n_value >> 11); 
             random_note = (random_n_value & 0x0007);
             break;
     }
