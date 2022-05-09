@@ -505,20 +505,29 @@ void check_miss_task(){
 void get_correct_note(){
     
     switch(LATF){
+        case 0x00:
+            correct_note = -1;
+            miss_penalty = 0;
+            break;
         case 0x01 :
             correct_note = 0 ;
+            miss_penalty = 1;
             break;
         case 0x02 :
             correct_note = 1 ;
+            miss_penalty = 1;
             break;
         case 0x04 :
             correct_note = 2 ;
+            miss_penalty = 1;
             break;
         case 0x08 :
             correct_note = 3 ;
+            miss_penalty = 1;
             break;
         case 0x10 :
             correct_note = 4 ;
+            miss_penalty = 1;
             break;
     }
 }
@@ -533,14 +542,9 @@ void blank_note_task(){
 void note_task(){
     uint16_t random_note = generate_random();
     
-    if(note_count<5){
-        correct_note = -1; 
-        miss_penalty = 0;
-    }
-    else{
-        get_correct_note(); // correct_note becomes the correct note according to LATF.
-        miss_penalty = 1;
-    }
+    
+    get_correct_note(); // correct_note becomes the correct note according to LATF.
+    
     
     switch(random_note){ //Lighting the new note. 
         case 0 :
