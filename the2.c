@@ -17,7 +17,6 @@ void __interrupt() highPriorityISR(void) {
 uint8_t game_started = 0, game_level = 1;
 
 uint8_t health = 9;
-
 uint8_t display_side = 0; // Used for 7 display segment that is alternating with the timer1. 
 
 //Timer states used for both timers.
@@ -67,6 +66,9 @@ uint8_t correct_note ; //Correct note that should be pressed. 0->4  for RG0->RG4
 
 void init_ports() {
     //IO config
+    
+    LATC = 0x00;
+    PORTC = 0x00;
     TRISA = 0x00;
     TRISB = 0x00;
     TRISC = 0x01;
@@ -153,7 +155,7 @@ void tmr0_isr(){
     switch (game_level) {
         case 1:
             // 500 msec tamamlamak icin 76 kere overflow olmali
-            if (tmr0_count <200) {
+            if (tmr0_count <76) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -165,7 +167,7 @@ void tmr0_isr(){
             break;
         case 2:
             // 400 msec tamamlamak icin 61 kere overflow olmali
-            if (tmr0_count < 150) {
+            if (tmr0_count < 61) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -177,7 +179,7 @@ void tmr0_isr(){
             break;
         case 3:
             // 300 msec tamamlamak icin 45 kere overflow olmali
-            if (tmr0_count < 140) {
+            if (tmr0_count < 45) {
                 tmr0_count++;
                 TMR0L = 0x00;
             }
@@ -196,8 +198,8 @@ void tmr1_isr() {
     PIR1bits.TMR1IF = 0;
     // overflow oldugu icin timer tamamlandi
     tmr1_state = TMR_DONE;
-    TMR1L = 0x00;
-    TMR1H = 0x00;
+    TMR1L = 0xFF;
+    TMR1H = 0x0A;
 }
 
 void init_tmr1() {
@@ -213,15 +215,15 @@ uint16_t generate_random() {
     uint16_t random_note ;
     switch(game_level) {
         case 1:
-            random_n_value = (random_n_value >> 1) | (random_n_value >> 15);
+            random_n_value = (random_n_value >> 1) | (random_n_value << 15);
             random_note = (random_n_value & 0x0007);
             break;
         case 2:
-            random_n_value = (random_n_value >> 3) | (random_n_value >> 13); 
+            random_n_value = (random_n_value >> 3) | (random_n_value << 13); 
             random_note = (random_n_value & 0x0007);
             break;
         case 3:
-            random_n_value = (random_n_value >> 5) | (random_n_value >> 11); 
+            random_n_value = (random_n_value >> 5) | (random_n_value << 11); 
             random_note = (random_n_value & 0x0007);
             break;
     }
@@ -246,6 +248,7 @@ void seven_segment_display() {
                     PORTJ = 0x6f; // to set 9
                     break;
                 case 8:
+                    
                     PORTJ = 0x7f; 
                     break;
                 case 7:
@@ -271,6 +274,9 @@ void seven_segment_display() {
                     break;
                 case 0: 
                     PORTJ = 0x3f;
+                    break;
+                default:
+                    PORTJ = 0x00;
                     break;
             }
             
@@ -360,8 +366,8 @@ void timer_task() {
         case TMR_IDLE:
             if (tmr1_startreq) {
                 tmr1_startreq = 0;
-                TMR1L = 0x00;
-                TMR1H = 0x00;
+                TMR1L = 0xff;
+                TMR1H = 0xad;
                 T1CONbits.TMR1ON = 1;
                 tmr1_state = TMR_RUN;
             }
@@ -410,7 +416,9 @@ void check_press_task(){
             miss_penalty = 0;
         }
         else {
-            if(--health == 0) {
+            --health;
+            if(health <= 0) {
+                PORTC = 0x00;
                 game_over_state = GAME_OVER_LOSE;
                 game_over();
             }
@@ -429,7 +437,9 @@ void check_press_task(){
             miss_penalty = 0;
         }
         else {
-            if(--health == 0) {
+            --health;
+            if(health <= 0) {
+                PORTC = 0x00;
                 game_over_state = GAME_OVER_LOSE;
                 game_over();
             }
@@ -448,7 +458,9 @@ void check_press_task(){
             miss_penalty = 0;
         }
         else {
-            if(--health == 0) {
+            --health;
+            if(health <= 0) {
+                PORTC = 0x00;
                 game_over_state = GAME_OVER_LOSE;
                 game_over();
             }
@@ -467,7 +479,9 @@ void check_press_task(){
             miss_penalty = 0;
         }
         else {
-            if(--health == 0) {
+            --health;
+            if(health <= 0) {
+                PORTC = 0x00;
                 game_over_state = GAME_OVER_LOSE;
                 game_over();
             }
@@ -486,7 +500,9 @@ void check_press_task(){
             miss_penalty = 0;
         }
         else {
-            if(--health == 0) {
+            --health;
+            if(health <= 0) {
+                PORTC = 0x00;
                 game_over_state = GAME_OVER_LOSE;
                 game_over();
             }
@@ -501,7 +517,9 @@ void check_press_task(){
 //Checks miss note. If note is missed, health -- . 
 void check_miss_task(){
     if(miss_penalty){
-        if(--health == 0) { // If health is over, health penalty and game over.
+        miss_penalty = 0;
+        --health;
+        if(health <= 0) { // If health is over, health penalty and game over.
                 game_over_state = GAME_OVER_LOSE;
                 game_over();
             }
@@ -667,6 +685,7 @@ void game_task() {
 void game_over() {
     game_started = 0;
     T0CONbits.TMR0ON = 0;
+    tmr0_state = TMR_IDLE;
     init_ports();
     init_variables();
     reset_press_states();
