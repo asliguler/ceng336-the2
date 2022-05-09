@@ -5,6 +5,7 @@
 void game_over();
 void tmr0_isr();
 void tmr1_isr();
+void get_correct_note();
 
 void __interrupt() highPriorityISR(void) {
     if (INTCONbits.TMR0IF) tmr0_isr();
@@ -57,7 +58,7 @@ uint8_t note_count = 0;     //Note count integer.
 uint8_t blank_note_count = 0; 
 
 uint8_t miss_penalty = 1; //miss penalty boolean. Becomes 0 when user catches the correct note.
-uint8_t correct_note; //Correct note that should be pressed. 0->4  for RG0->RG4. -1 when a user should not press any note.
+uint8_t correct_note ; //Correct note that should be pressed. 0->4  for RG0->RG4. -1 when a user should not press any note.
 
 #define TIMER0_PRELOAD_LEVEL1 74
 #define TIMER0_PRELOAD_LEVEL2 4
@@ -106,6 +107,7 @@ void init_variables(){
     level_max_note = 5; 
     note_count = 0; 
     blank_note_count = 0;
+    miss_penalty = 0;
 }
 void reset_press_states(){
     press_state0=NOT_PRSS; 
@@ -396,6 +398,8 @@ void forward_task(){
 //Check press task every LATG register with the information of correct note that we assigned in the note_Task(). Same logic for all 4.
 void check_press_task(){
     // LATG0
+    
+    get_correct_note();
     if(PORTGbits.RG0 && press_state0 == NOT_PRSS){
         press_state0 = PRSS;
         if(correct_note == 0) {
@@ -430,7 +434,7 @@ void check_press_task(){
         
     }
     else if(!PORTGbits.RG1 && press_state1 == PRSS){
-        press_state3 = NOT_PRSS;
+        press_state1 = NOT_PRSS;
     }
 
     // LATG2
@@ -449,7 +453,7 @@ void check_press_task(){
         
     }
     else if(!PORTGbits.RG2 && press_state2 == PRSS){
-        press_state3 = NOT_PRSS;
+        press_state2 = NOT_PRSS;
     }
 
     // LATG3
@@ -487,7 +491,7 @@ void check_press_task(){
         
     }
     else if(!PORTGbits.RG4 && press_state4 == PRSS){
-        press_state3 = NOT_PRSS;
+        press_state4 = NOT_PRSS;
     }
 }
 
@@ -542,9 +546,9 @@ void blank_note_task(){
 void note_task(){
     uint16_t random_note = generate_random();
     
-    
+
     get_correct_note(); // correct_note becomes the correct note according to LATF.
-    
+
     
     switch(random_note){ //Lighting the new note. 
         case 0 :
