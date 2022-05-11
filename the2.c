@@ -2,6 +2,26 @@
 #include <stdint.h>
 #pragma config OSC = HSPLL
 
+/*
+timer0 calculation
+
+For 500 ms:
+0.5x1000000/256 = 19530 cycles needed
+
+256x76 = 19456 we need 76 overflows and 19530-19456 = 74 -> 255-74 = 181 preload value
+
+For 400 ms:
+0.4x1000000/256 = 15620 cycles needed
+
+256x61 = 15616 we need 61 overflows and 15620-15616 = 4 -> 255-4 = 251 preload value
+
+For 300 ms:
+0.3x1000000/256 = 11710 cycles needed
+
+256x45 = 11520 we need 45 overflows and 11710-11520 = 190 -> 255-190 = 65 preload value
+
+*/
+
 void game_over();
 void tmr0_isr();
 void tmr1_isr();
